@@ -57,6 +57,7 @@ document.addEventListener("DOMContentLoaded", function() {
         /* Load module HTML asynchronously */
         var xhr = new XMLHttpRequest();
         xhr.open('GET', _base_url + '/modules/' + moduleName + '/index.html', true);
+        
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4) {
                 if (xhr.status === 200) {
@@ -86,14 +87,30 @@ document.addEventListener("DOMContentLoaded", function() {
 
                     script.onerror = function() {
                         _modules[moduleName].loading = false;
-                        alert('Error loading module script: ' + moduleName);
+                        _modules[moduleName].callbacks = [];
+                        /* Remove failed container */
+                        if (moduleContent.parentNode) {
+                            moduleContent.parentNode.removeChild(moduleContent);
+                        }
+                        console.error('Error loading module script: ' + moduleName);
+                        alert('Failed to load module: ' + _modules[moduleName].name);
                     };
                 } else {
                     _modules[moduleName].loading = false;
-                    alert('Error loading module: ' + moduleName);
+                    _modules[moduleName].callbacks = [];
+                    console.error('Error loading module HTML (status ' + xhr.status + '): ' + moduleName);
+                    alert('Failed to load module: ' + _modules[moduleName].name);
                 }
             }
         };
+        
+        xhr.onerror = function() {
+            _modules[moduleName].loading = false;
+            _modules[moduleName].callbacks = [];
+            console.error('Network error loading module: ' + moduleName);
+            alert('Network error loading module: ' + _modules[moduleName].name);
+        };
+        
         xhr.send(null);
     }
 
