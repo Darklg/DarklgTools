@@ -8,66 +8,79 @@ document.addEventListener("DOMContentLoaded", function() {
         $mainContent = document.getElementById('main-content');
 
     /* ----------------------------------------------------------
-  Load module states
----------------------------------------------------------- */
+      Menu
+    ---------------------------------------------------------- */
 
-    Object.keys(_modules).forEach(function(module_name) {
-        _modules[module_name].loaded = false;
+    /* Build main menu */
+    Object.keys(_modules).forEach(function(moduleName) {
+        var navLink = document.createElement('a');
+        navLink.href = '#module-' + moduleName;
+        navLink.innerText = _modules[moduleName].name;
+        $menu.appendChild(navLink);
     });
 
-    function _are_all_modules_loaded() {
-        return Object.keys(_modules).every(function(module_name) {
-            return _modules[module_name].loaded === true;
-        });
-    }
-
-    function modules_loaded_callback() {
-        if (!_are_all_modules_loaded()) {
-            return;
+    $menu_links = $menu.querySelectorAll('a');
+    $menu_links.forEach(function($link) {
+        if (window.location.hash === $link.getAttribute('href')) {
+            set_menu_item($link);
         }
 
-        $menu_links = $menu.querySelectorAll('a');
-        $modules_content = document.querySelectorAll('.module-content');
-
-        /* Set menu events */
-        $menu_links.forEach(function($link) {
-            if (window.location.hash === $link.getAttribute('href')) {
-                set_menu_link($link);
-            }
-
-            $link.addEventListener('click', function() {
-                set_menu_link($link);
-            });
+        $link.addEventListener('click', function() {
+            set_menu_item($link);
         });
+    });
 
+    function set_menu_item(link) {
+        $menu_links.forEach(function($link) {
+            $link.classList.remove('is-active');
+        });
+        link.classList.add('is-active');
+        var targetId = link.getAttribute('href').substring(1);
+        var moduleName = targetId.replace('module-', '');
+        load_module(moduleName);
+    }
+
+    /* Helpers */
+    function hide_all_modules() {
+        $modules_content = document.querySelectorAll('.module-content');
+        for (var i = 0; i < $modules_content.length; i++) {
+            $modules_content[i].style.display = 'none';
+        }
+    }
+
+    function display_module(moduleName) {
+        var targetId = 'module-' + moduleName;
+        document.getElementById(targetId).style.display = 'block';
     }
 
     /* ----------------------------------------------------------
-      Load modules
+      Load a module
     ---------------------------------------------------------- */
 
-    Object.keys(_modules).forEach(function(moduleName) {
+    function load_module(moduleName) {
+        if (_modules[moduleName].loaded) {
+            hide_all_modules();
+            display_module(moduleName);
+            return;
+        }
 
         /* Build content */
         var moduleContent = document.createElement('div');
         moduleContent.id = 'module-' + moduleName;
         moduleContent.className = 'module-content';
-        moduleContent.style.display = 'none';
         moduleContent.innerHTML = '<h2>' + _modules[moduleName].name + '</h2>';
 
         /* Load module HTML */
         var xhr = new XMLHttpRequest();
         xhr.open('GET', _base_url + '/modules/' + moduleName + '/index.html', false);
-        xhr.send(null);
-        if (xhr.status === 200) {
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE || xhr.status !== 200) {
+                return;
+            }
+
+            hide_all_modules();
             moduleContent.innerHTML += xhr.responseText;
             $mainContent.appendChild(moduleContent);
-
-            /* Append link to nav menu */
-            var navLink = document.createElement('a');
-            navLink.href = '#module-' + moduleName;
-            navLink.innerText = _modules[moduleName].name;
-            $menu.appendChild(navLink);
 
             /* Load module */
             var script = document.createElement('script');
@@ -76,30 +89,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
             script.onload = function() {
                 _modules[moduleName].loaded = true;
-                modules_loaded_callback();
             };
         }
+        xhr.send(null);
 
-    });
-
-    /* ----------------------------------------------------------
-      Navigation event
-    ---------------------------------------------------------- */
-
-
-    function set_menu_link(link) {
-        $menu_links.forEach(function($link) {
-            $link.classList.remove('is-active');
-        });
-        link.classList.add('is-active');
-        var targetId = link.getAttribute('href').substring(1);
-        for (var i = 0; i < $modules_content.length; i++) {
-            $modules_content[i].style.display = 'none';
-        }
-        document.getElementById(targetId).style.display = 'block';
     }
-
-
-
 
 });
