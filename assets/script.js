@@ -32,43 +32,66 @@ document.addEventListener("DOMContentLoaded", function() {
     ---------------------------------------------------------- */
 
     function loadModule(moduleName, callback) {
-        /* Skip if already loaded or loading */
-        if (_modules[moduleName].loaded || _modules[moduleName].loading) {
-            if (callback && _modules[moduleName].loaded) {
+        /* If already loaded, execute callback immediately */
+        if (_modules[moduleName].loaded) {
+            if (callback) {
                 callback();
             }
             return;
         }
 
-        _modules[moduleName].loading = true;
+        /* If loading, queue the callback */
+        if (_modules[moduleName].loading) {
+            if (callback) {
+                if (!_modules[moduleName].callbacks) {
+                    _modules[moduleName].callbacks = [];
+                }
+                _modules[moduleName].callbacks.push(callback);
+            }
+            return;
+        }
 
-        /* Build content container */
-        var moduleContent = document.createElement('div');
-        moduleContent.id = 'module-' + moduleName;
-        moduleContent.className = 'module-content';
-        moduleContent.style.display = 'none';
-        moduleContent.innerHTML = '<h2>' + _modules[moduleName].name + '</h2><div class="loading">Loading...</div>';
-        $mainContent.appendChild(moduleContent);
+        _modules[moduleName].loading = true;
+        _modules[moduleName].callbacks = callback ? [callback] : [];
 
         /* Load module HTML asynchronously */
         var xhr = new XMLHttpRequest();
         xhr.open('GET', _base_url + '/modules/' + moduleName + '/index.html', true);
         xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4 && xhr.status === 200) {
-                moduleContent.innerHTML = '<h2>' + _modules[moduleName].name + '</h2>' + xhr.responseText;
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    /* Build content container */
+                    var moduleContent = document.createElement('div');
+                    moduleContent.id = 'module-' + moduleName;
+                    moduleContent.className = 'module-content';
+                    moduleContent.style.display = 'none';
+                    moduleContent.innerHTML = '<h2>' + _modules[moduleName].name + '</h2>' + xhr.responseText;
+                    $mainContent.appendChild(moduleContent);
 
-                /* Load module script */
-                var script = document.createElement('script');
-                script.src = _base_url + '/modules/' + moduleName + '/script.js';
-                document.head.appendChild(script);
+                    /* Load module script */
+                    var script = document.createElement('script');
+                    script.src = _base_url + '/modules/' + moduleName + '/script.js';
+                    document.head.appendChild(script);
 
-                script.onload = function() {
-                    _modules[moduleName].loaded = true;
+                    script.onload = function() {
+                        _modules[moduleName].loaded = true;
+                        _modules[moduleName].loading = false;
+                        /* Execute all queued callbacks */
+                        var callbacks = _modules[moduleName].callbacks || [];
+                        for (var i = 0; i < callbacks.length; i++) {
+                            callbacks[i]();
+                        }
+                        _modules[moduleName].callbacks = [];
+                    };
+
+                    script.onerror = function() {
+                        _modules[moduleName].loading = false;
+                        alert('Error loading module script: ' + moduleName);
+                    };
+                } else {
                     _modules[moduleName].loading = false;
-                    if (callback) {
-                        callback();
-                    }
-                };
+                    alert('Error loading module: ' + moduleName);
+                }
             }
         };
         xhr.send(null);
@@ -112,17 +135,11 @@ document.addEventListener("DOMContentLoaded", function() {
             /* Update URL hash */
             window.location.hash = $link.getAttribute('href');
             
-            /* Load module if not loaded */
+            /* Load module (will execute callback when loaded) */
             loadModule(moduleName, function() {
                 showModule(moduleName);
                 setActiveLink(moduleName);
             });
-            
-            /* If already loaded, just show it */
-            if (_modules[moduleName].loaded) {
-                showModule(moduleName);
-                setActiveLink(moduleName);
-            }
         });
     });
 
