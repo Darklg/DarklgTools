@@ -81,6 +81,10 @@ button:hover {
 
 textarea {
     width: 100%;
+}
+
+input:not([type="checkbox"]) ,
+textarea {
     padding: .5em;
     border: 1px solid #CCC;
 }
@@ -137,4 +141,37 @@ nav a {
 nav a:hover,
 nav a.is-active {
     text-decoration: underline;
+}
+
+/* ----------------------------------------------------------
+  Result
+---------------------------------------------------------- */
+
+pre {
+    margin: 1em 0;
+    padding: 1em;
+    border: 1px solid #EEE;
+    overflow-x: auto;
+    background-color: #F8F8F8;
+}
+
+/* ----------------------------------------------------------
+  Grid
+---------------------------------------------------------- */
+
+.v-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1em;
+}
+
+.v-stack > * {
+    flex: 1;
+}
+
+@media (min-width:769px) {
+    .v-stack {
+        flex-direction: row;
+    }
 }
